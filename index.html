@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script src="textHighlighter.js"></script>
+        <script src="syntaxChecker.js"></script>
+    </head>
+    <style>
+        .Container1{                        
+            width: 900px;
+            height:607px;
+            border: 1px #c0c0c0 solid; 
+            display: block;        
+            background-color: transparent;            
+        }
+        .hLight{            
+            float: left;
+            position: absolute;
+            top: -600;
+            z-index: -1;
+            left: 54px;
+            width: 825px;
+            height: 579px;
+            color: #5b5b5b;
+            border: 1px #c0c0c0 solid;
+            border-left: #c0c0c0 thick solid;
+            background-color: #f7f7f7; 
+            white-space: pre;
+            overflow: hidden;
+        }
+        .texteditor:focus{
+            outline-color: transparent;
+        }        
+        .texteditor{
+            float: left;
+            resize: none;
+            z-index: 5;             
+            width: 825px;
+            height: 579px;
+            border: 1px #c0c0c0 solid; 
+            color: transparent;
+            background-color: transparent;
+            border-left: #c0c0c0 thick solid;
+            overflow: auto;            
+            caret-color: #5b5b5b;
+        }
+        #col-num{
+            float: left;            
+            width: 16px;
+            height: 579px;
+            border: 1px #c0c0c0 solid;
+            background-color: #e2e2e2;
+            overflow: hidden;            
+        }
+        #col-num,.texteditor,.hLight{
+            padding: 10px;
+            font: 14px/20px 'Source Code Pro',sans-serif;
+            font-weight: 600;
+            letter-spacing: 1px;            
+        }
+        #err-console{
+          float: left; 
+          position: absolute; 
+          left: 200px; 
+          top: 20px;
+          width: 400px; 
+          height: 100px; 
+          border: 1px silver solid; 
+          visibility: hidden; 
+          color: black; 
+          background-color: whitesmoke;           
+        }        
+        mark{
+            background-color: transparent;
+        }
+        .error-line{background-color: red; width: 20px; color: transparent; border-radius: 100%;}
+        .code-elem{color: #0058ed ; font-style: oblique;}
+        .code-keywords{color: #791d81 ;}
+        ::selection{background-color: #e2e2e2;}
+        .code-func{color:#c00000 ; font-style: oblique;}
+        .wrapper{color: silver;}
+        .wrapper *{color:silver ;}
+        .parenthese{color: #c00000; font-style: oblique;}
+    </style>
+    <body>
+        <div class="Container1">
+            <table>
+                <tr>
+                    <td><div id="col-num">01</div></td>
+                    <td>
+                        <textarea class="texteditor" id="textEditor" wrap="off" spellcheck="false">hello world</textarea>
+                        <div class="hLight" id="hLight">                            
+                        </div>
+                        <div class="err-console" id="err-console"></div>
+                    </td>
+                </tr>
+            </table>            
+        </div>        
+    </body>
+    <script>
+        var linecount,linecount1;
+        var linenum;
+        var text , temp=[];        
+        var linecol = document.getElementById('col-num');
+        var textcol = document.getElementById('textEditor');
+        var curpos=0;
+        var curlinenum;
+        // ------------------------------------------------//
+        // ------For line number Indication Code...--------//
+        // ------------------------------------------------//        
+        document.addEventListener('keyup',function(){          
+            text = textcol.value;
+            linecount = text.split('\n');
+            document.getElementById('col-num').innerHTML="";
+            linenum = '';
+            for(i=1;i<=linecount.length;i++){
+                if(i < 10){                        
+                    linenum +=(i)+'<br/>';
+                }else{
+                    linenum +=(i)+'<br/>';
+                }
+            }            
+            checkSyntax(text);
+            document.getElementById('col-num').innerHTML=linenum;            
+        });
+        function errpop(object1 , event){
+            //alert(object1);
+            for(j = 0 ; j < sc_Errorline.length; j++){
+                if(sc_Errorline[j] === object1){
+                    $('#err-console').html('<header><b>Error console:</b></header><hr>'+sc_errorarray[j]);
+                    document.getElementById("err-console").setAttribute("style","position: absolute; left: 65px; top: "+event.clientY+"px; padding:5px; width: 400px; height: 100px; border: 1px silver solid; visibility: visible; color: black; background-color: whitesmoke;");
+                    console.log('hello');
+                    break;
+                }
+            }
+        }
+        function errpopout(){
+            document.getElementById("err-console").setAttribute("style","position: absolute; width: 400px; height: 100px; border: 1px silver solid; visibility: hidden; color: black; background-color: whitesmoke;");
+        }
+        // ------------------------------------------------//
+        // -----transfer code from textarea to div...------//
+        // ------------------------------------------------//
+        var myvar = setInterval(texthightlight,10);
+        function texthightlight(){
+            text = textcol.value;
+            linecount1 = text.replace(/\n/g,'<br/>');                        
+            temp = linecount1.split('<br/>');
+            curpos = textcol.selectionStart+1;            
+            
+            // ------------------------------------------------//
+            // ------geting cursor line number position..------//
+            // ------------------------------------------------//
+        
+            curlinenum=0;
+            for(j=0;j<curpos;j++){
+                if(text.charAt(j) === '\n'){
+                    curlinenum++;                    
+                }                
+            }
+            if(text.charAt(curpos) !== '\n' && text.charAt(curpos-1) === '\n'){
+                curlinenum--;
+            }
+            // ------------------------------------------------//
+            // ------sending line for syntax checking...------//
+            // ------------------------------------------------//            
+            var temp1 = applyHighlights(linecount1);
+            if(linecol.scrollWidth < 47 && linecol.scrollWidth > 38){
+                $('#col-num').scrollLeft(5);
+            }
+            if(linecol.scrollWidth > 47){
+                $('#col-num').scrollLeft(9);
+            }
+            $('#hLight').html(temp1);            
+        };        
+        // ------------------------------------------------//
+        // -binding Scroll of textarea with number line...-//
+        // ------------------------------------------------//
+        
+        $('#hLight').on('scroll', function () {
+            $('.texteditor').scrollTop($(this).scrollTop());            
+        });
+        $('.texteditor').on('scroll', function () {
+            $('#hLight').scrollTop($(this).scrollTop());
+            $('#col-num').scrollTop($(this).scrollTop());
+        });
+        $('#hLight').click(function(){
+            $('.texteditor').focus();
+        });
+        </script>
+</html>
